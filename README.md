@@ -77,17 +77,17 @@ Stark Assistant is designed to feel like a dependable “second brain” that li
 
 ```mermaid
 flowchart TD
-  User[User (Chat / Remote)] -->|messages| GW[Session Gateway]
-  UI[Control Center UI (Qt Desktop)] <--> GW
-  GW <--> EB[Event Bus (WS + durable events)]
+  User["User (Chat / Remote)"] -->|messages| GW[Session Gateway]
+  UI["Control Center UI (Qt Desktop)"] <--> GW
+  GW <--> EB["Event Bus (WS + durable events)"]
 
   GW --> ORCH[Orchestrator Loop]
-  ORCH <--> MEM[MemoryStore (SQLite + FTS5)]
-  ORCH --> ROUTER[Model Router (profiles + stage rules)]
-  ROUTER --> LLMRT[LLM Runtime (STRICT_JSON / CODE_PATCH / PROSE)]
-  ORCH --> TR[ToolRuntime (registry + approvals)]
-  TR --> OPS[Operator (Playwright headed)]
-  TR --> TP[Tool Packs (filesystem/web/pdf/etc)]
+  ORCH <--> MEM["MemoryStore (SQLite + FTS5)"]
+  ORCH --> ROUTER["Model Router (profiles + stage rules)"]
+  ROUTER --> LLMRT["LLM Runtime (STRICT_JSON / CODE_PATCH / PROSE)"]
+  ORCH --> TR["ToolRuntime (registry + approvals)"]
+  TR --> OPS["Operator (Playwright headed)"]
+  TR --> TP["Tool Packs (filesystem/web/pdf/etc)"]
   OPS --> ART[Artifacts + Downloads]
   TP --> ART
   MEM <--> ART
@@ -263,10 +263,10 @@ flowchart LR
   A[Capture: events/plans/tool_runs] --> B[Recall: memories_fts + recent events]
   B --> C[Plan + Act]
   C --> D[Review: success/mismatch/failure]
-  D --> E[Learn: upsert durable memories (active immediately)]
+  D --> E["Learn: upsert durable memories (active immediately)"]
   E --> F[Export: Markdown views]
   E -->|forget request| G[pending_delete]
-  G -->|approve| H[sunset (soft delete)]
+  G -->|approve| H["sunset (soft delete)"]
   G -->|deny| I[restore active]
 ```
 
