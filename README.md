@@ -160,6 +160,7 @@ sequenceDiagram
   T-->>O: ToolResult (status + artifacts)
 ```
 
+
 ### Pause/resume bridge (pending actions)
 
 When an approval (or required user input) blocks execution, the orchestrator serializes a resumable checkpoint:
@@ -171,6 +172,8 @@ When an approval (or required user input) blocks execution, the orchestrator ser
 This enables:
 - safe “human-in-the-loop” control for Tier 1/2 tools
 - reliable continuation after UI reconnects or app restarts
+
+
 
 ### Memory forget flow
 
@@ -275,6 +278,7 @@ Unknown-job defaults (tunable):
 - `MATCH_THRESHOLD = 0.25`
 - `CONF_THRESHOLD  = 0.55`
 
+
 ### 2) Orchestrator loop (resumable state machine)
 
 Stages:
@@ -362,6 +366,7 @@ Safety gates:
 - External-state actions are always Tier 2 (send/post/submit/pay/delete/confirm).
 - Login flows prefer: user logs in manually → operator continues; secrets redacted in logs.
 
+
 Operator tools (suggested registry)
 - Tier 0 (read-only):
   - `browser.open(url, context_id=None)`
@@ -388,6 +393,7 @@ Operator tools (suggested registry)
   - `browser.upload(page_id, file_input_selector, local_path)`
   - `browser.delete_action(page_id, selector)`
 
+
 Failure taxonomy (stable error classes for learning)
 - `selector_not_found`
 - `element_not_clickable` (overlay/intercept)
@@ -399,6 +405,7 @@ Failure taxonomy (stable error classes for learning)
 - `upload_failed`
 - `submit_blocked_by_policy` (needs Tier 2 approval)
 - `ambiguous_target` (needs user clarification)
+
 
 ### 4) Proactive idle loop / reflection engine (no spam)
 
@@ -424,6 +431,7 @@ Idle defaults (tunable):
 - `IDLE_AFTER_MINUTES = 10`
 - Rate limits (anti-spam): max new pending memories per hour: 3; max owner-model candidates per run: 1; max maintenance proposals per run: 2
 - Confidence bands: `HIGH_CONF = 0.80`, `MED_CONF = 0.55` (below MED → unresolved gap)
+
 
 ### 5) Control Center UI + Session Gateway
 
@@ -549,6 +557,7 @@ Additional (recommended) tables that may exist even if not shown in the ER above
 - `digests` (watchlist outputs)
 - `watchlists` (enabled topics + schedules)
 - `config_versions`, `config_audit` (config history)
+
 
 ```mermaid
 erDiagram
