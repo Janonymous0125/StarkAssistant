@@ -1,7 +1,7 @@
 # Stark Assistant
 
 A local-first personal AI assistant for Windows 11, powered by self-hosted models (Ollama, BitNet), with auditable long-term memory, browser automation, proactive reflection, and a safety-first approval system.  
-**Current build status**: Core infrastructure (contracts, configuration, observability, core tools, memory, LLM runtime) completed; routing, orchestrator, operator, UI, and advanced features in progress.
+**Current build status**: Core infrastructure (contracts, configuration, observability, core tools, memory, LLM runtime, routing, orchestrator, operator, UI/gateway) completed; advanced features (skills, idle loop, replay, packaging, self‑improving, docs, security) in progress.
 
 ---
 
@@ -38,9 +38,9 @@ Stark Assistant is designed to feel like a dependable “second brain” that li
 ## Core capabilities
 
 - **SQLite-backed memory**: events, plans, tool runs, durable memories, failures, and approval-gated forgetting. Full-text search (FTS5) for recall.
-- **Orchestrator loop** (in progress): a resumable agent state machine (ingest → recall → plan → act → review → learn → reply) with no artificial tool-call cap, stall guard, and unknown‑job detection.
+- **Orchestrator loop**: a resumable agent state machine (ingest → recall → plan → act → review → learn → reply) with no artificial tool-call cap, stall guard, and unknown‑job detection.
 - **Operator (browser controller)**: headed Playwright, DOM‑first actions, mouse/keyboard fallback, evidence capture, strict gating for irreversible actions.
-- **Control Center UI + Session Gateway** (in progress): local desktop UI (Qt) and optional web‑based approval panel. Real‑time event stream, approvals queue, trace timeline, artifact viewer.
+- **Control Center UI + Session Gateway**: local desktop UI (Qt) and web‑based approval panel. Real‑time event stream, approvals queue, trace timeline, artifact viewer, voice I/O (STT/TTS).
 - **Skills system** (planned): modular “skill packs” with declarative recipes or Python entrypoints; safe install (approval‑gated) and sandboxed execution.
 - **Typed contracts + event bus**: consistent data structures across UI ↔ orchestrator ↔ tools ↔ memory. All messages validated, versioned, and persisted for replay.
 - **Model routing + profiles**: choose the right model per stage and output format (STRICT_JSON, CODE_PATCH, PROSE). Supports Ollama and BitNet (short‑form only). Learned overrides based on health metrics.
@@ -233,10 +233,10 @@ The project is organized into the following modules, each with a clear status:
 | **4. Core Tool Packs + Workspace Sandbox** | `fs.*`, `project.*`, `archive.*`, `text.*` tools with evidence (diffs/snapshots), stable error codes. | ✅ **DONE** |
 | **5. Memory Module** | SQLite tables (`events`, `plans`, `tool_runs`, `memories`, `failures`), FTS recall, auto‑save, approval‑gated forget. | ✅ **DONE** |
 | **6. LLM Runtime + Structured Output** | Unified generate API, adapters (Ollama, BitNet), STRICT_JSON/CODE_PATCH validation/repair, `llm_runs` logging. | ✅ **DONE** |
-| **7. LLM Routing + Model Profiles** | Model registry, task classifier, deterministic router with fallback chains, learned overrides. | 🟡 **DOING** |
-| **8. Orchestrator Loop** | Stage machine (ingest→…→reply), plan JSON, stall guard, approvals pause/resume, unknown‑job detection. | ⏳ **TODO** |
-| **9. Operator (Computer Controller)** | Headed Playwright, DOM‑first actions, human‑like fallback, Tier‑2 gating, login/captcha handling. | ⏳ **TODO** |
-| **10. Control Center UI + Session Gateway** | Local Qt UI, web‑based approvals panel, connection health, artifact viewer, voice I/O (planned). | 🟡 **IN PROGRESS** |
+| **7. LLM Routing + Model Profiles** | Model registry, task classifier, deterministic router with fallback chains, learned overrides. | ✅ **DONE** |
+| **8. Orchestrator Loop** | Stage machine (ingest→…→reply), plan JSON, stall guard, approvals pause/resume, unknown‑job detection. | ✅ **DONE** |
+| **9. Operator (Computer Controller)** | Headed Playwright, DOM‑first actions, human‑like fallback, Tier‑2 gating, login/captcha handling. | ✅ **DONE** |
+| **10. Control Center UI + Session Gateway** | Local Qt UI, web‑based approvals panel, connection health, artifact viewer, voice I/O (STT/TTS). | ✅ **DONE** |
 | **11. Skills System** | Pack discovery, declarative/Python skills, safe install (approval‑gated), skill usage tracking. | ⏳ **TODO** |
 | **12. Proactive Idle Loop + Reflection** | Idle scheduler, self‑Q/A, watchlists (opt‑in), memory maintenance, owner‑model candidates. | ⏳ **TODO** |
 | **13. Testing + Replay Harness** | Replay bundles (events + frames), scenario DSL, golden assertions, regression test automation. | ⏳ **TODO** |
@@ -378,16 +378,7 @@ stark-assistant/
 
 The project is built module‑by‑module according to the checklist. Current focus:
 
-1. ✅ **Module 1–6**: Contracts, Config, Observability, Core Tools, Memory, LLM Runtime (complete).
-2. 🟡 **Module 7**: LLM Routing (in progress).
-3. ⏳ **Module 8**: Orchestrator Loop.
-4. ⏳ **Module 9**: Operator.
-5. 🟡 **Module 10**: Control Center UI + Gateway (in progress).
-6. ⏳ **Module 11**: Skills System.
-7. ⏳ **Module 12**: Proactive Idle Loop.
-8. ⏳ **Module 13**: Testing + Replay Harness.
-9. ⏳ **Module 14**: Packaging + Updates + Secrets.
-10. ⏳ **Module 15**: Self‑Improving System.
-11. ⏳ **Modules 16–18**: Alignment, Docs, Security Ops.
+1. ✅ **Modules 1–10**: Contracts, Config, Observability, Core Tools, Memory, LLM Runtime, Routing, Orchestrator, Operator, UI/Gateway (complete).
+2. ⏳ **Modules 11–18**: Skills, Proactive Idle Loop, Testing/Replay, Packaging, Self‑Improving System, Alignment, Docs, Security Ops.
 
-For the latest status, see the [checklist](docs/Stark_Personal_Assistant_Checklist_v7.txt).
+For the latest status, see the [checklist](docs/Stark_Personal_Assistant_Checklist_v8.txt).
