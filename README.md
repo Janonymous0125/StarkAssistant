@@ -1,6 +1,22 @@
 # Stark Assistant
 
-**Version:** v1.20.5-beta
+**Version:** v1.20.5
+
+## Release quick start
+
+1. Download and extract the Stark release folder.
+2. Install Ollama and make sure at least one local chat model is available.
+3. Start Stark with `Start_Stark.bat` (Windows) or `python scripts/start_stark.py --start-ollama`.
+
+The Windows release entrypoint tries to start local Ollama when the CLI is available, checks readiness, then delegates to the existing Local HUD launcher.
+
+For a one-shot agent turn without opening the HUD, run:
+
+```bash
+python scripts/ask_stark.py "Say hello as Stark in one short sentence."
+```
+
+That command uses the same local Orchestrator + Session Gateway + routed Ollama runtime path as the HUD chat surface.
 
 A local-first personal AI assistant for Windows 11, powered by self-hosted models (Ollama), with auditable long-term memory, browser automation, proactive reflection, and a safety-first approval system.
 
@@ -40,10 +56,15 @@ Stark Assistant is designed to feel like a dependable “second brain” that li
 ## Core capabilities
 
 - **SQLite-backed memory**: events, plans, tool runs, durable memories, failures, and approval-gated forgetting.
-- **Orchestrator loop**: a resumable agent state machine (ingest → recall → plan → act → review → learn → reply) with no artificial tool-call cap.
+- **Layered Brain**: the shipped turn path now creates a canonical structured thought state before reply generation, with input normalization, fast/slow reasoning mode selection, bounded curiosity/thinking metadata, conditional summarized-memory retrieval, memory writeback proposals, and a read-only bridge to the existing UI goal manager.
+- **PM Project Loop**: Stark can turn a complicated request into a GoalStore-backed project goal, child task goals, task status metadata, a PM report artifact, and local UI snapshot state without introducing a second project manager.
+- **Agency capability profile**: Stark now exposes a typed, bounded view of what it can currently do across `think`, `work`, `earn`, `live`, and `communicate`, including shipped surfaces, required gates, blocked actions, and evidence refs.
+- **Supervised internet runtime**: Stark now has a typed observe-only internet supervision contract, owner/father approval profile for Jeremiah Wong Zhi Qi, internet-action preflight, draft-only outbound communication rules, budgets, browser quarantine defaults, remote-web restrictions, kill-switch semantics, red-team gates, and a human-style learning plan that remains feedback/evidence/proposal based.
+- **External module intake and adapters**: Stark can materialize local module bundles from `tmp/` into repo-owned `external_modules/`, classify each bundle by AGI-relevant fit, expose repo-owned adapter/quarantine status in the local UI, and route the first optional Browser Use MCP research adapter through the existing no-web-by-default operator gate.
+- **Orchestrator loop**: a resumable agent state machine (ingest → recall → plan → act → review → learn → reply). The shipped local path proves routed reply plus bounded routed tool-loop / review helpers where invoked; it does not claim that every stage is independently LLM-driven on every startup path.
 - **Operator (browser controller)**: headed Playwright, DOM-first actions, mouse/keyboard fallback, evidence capture, strict gating for irreversible actions.
 - **Control Center UI + Session Gateway**: local desktop UI for approvals and trace timeline; gateway supports remote access when you enable it.
-- **Skills system**: modular “skill packs” with procedures (“recipes”), tool bindings, and tests.
+- **Skills system**: modular local skill packs with explicit install/enable/disable controls. The shipped runtime supports declared `python` and `command_template` runners only; preview remains no-side-effects and broader manifest/runtime breadth should not be assumed.
 - **Reflex registry substrate**: typed, reviewable, versioned reflex contracts with local install/load/list/disable/revert registry behavior. M22.1 defines the governed registry only; M22.2 adds local mined candidate records backed by repeated successful traces, but candidates remain review-only, non-executable, and separate from the installed registry. M22.3 adds a strictly bounded direct-execution slice for installed approved low-risk `tool_contract` reflexes only; explicit direct calls still route through shipped `ToolRuntime` policy, SafeRoots, receipts, and disable/revert controls, and normal shipped turns may now try an installed reflex before the full planner with an explicit planner fallback when routing is blocked or not applicable.
 - **Governed coding patch pipeline**: M23.2 keeps the typed coding-task + patch-plan contracts from M23.1 and now adds a bounded local validation/apply/rollback path. Stark can validate a reviewable patch in a copied sandbox repo, apply it only through the controlled declared-scope path, record before/after checkpoints plus apply receipts, and restore the previous state explicitly through checkpoint-backed rollback. The shipped HUD now consumes the existing coding snapshot surface so bounded validation/apply/block/rollback outcomes remain visible through normal snapshot resync and replay bundle hydration. The path stays local-first, reviewable, and scope-bounded; it is not an autonomous repo-rewrite loop.
 - **Coding-task mining bridge**: M23.3 adds a local-first mining pass over shipped coding evidence under `state/coding/` and routes bounded recurring coding-workflow candidates into the existing Module 22 reflex-candidate store. Mining stays deterministic, report-backed, and review-only: safe repeated patterns such as workspace-scoped version-sync/doc/report chores can become `ready_for_review` candidates, sensitive or broad patterns are blocked with explicit reasons, and mined records never auto-install or auto-execute.
@@ -51,6 +72,7 @@ Stark Assistant is designed to feel like a dependable “second brain” that li
 - **Model routing**: choose the right model/profile per stage and output format (JSON, patch, prose).
 - **Deterministic replay harness**: record-and-replay tool/LLM I/O for debugging and regression tests.
 - **Packaging, launch, and secrets**: current local-launch, update rollback, and secret-handling surfaces exist; M118 adds a bounded Python installer/uninstall contract with strict workspace-marker/install-id delete guards and explicit backup/restore helpers, while a signed Windows installer package remains a separate packaging frontier.
+- **Local deployment profiles and recovery drills**: M27.2 adds bounded local profile startup/verification hooks (`minimal_local`, `brain_enabled_local`, `full_lab_local`) plus explicit local recovery drills for provider outage fallback, bad reflex revert, governed patch rollback, and adapter activation rollback. These remain script-driven and local-only; they do not imply a service manager, remote orchestration, or automatic healing.
 - **Observability**: redaction, structured logs, crash reports, diagnostics bundles, and exportable audit trails.
 
 ---
@@ -88,22 +110,229 @@ flowchart TD
   GW <--> EB["Event Bus (WS + durable events)"]
 
   GW --> ORCH[Orchestrator Loop]
-  ORCH <--> MEM["MemoryStore (SQLite + FTS5 + local retrieval index)"]
-  ORCH --> ROUTER["Model Router (profiles + stage rules)"]
+  ORCH --> BRAIN["Layered Brain M1 (thought state + routing gates)"]
+  BRAIN <--> MEM["MemoryStore (SQLite + FTS5 + local retrieval index)"]
+  BRAIN <--> GOALS["GoalStore (existing UI goal manager)"]
+  ORCH <--> MEM
+  ORCH <--> GOALS
+  BRAIN --> ROUTER["Model Router (profiles + stage rules)"]
   ROUTER --> LLMRT["LLM Runtime (STRICT_JSON / CODE_PATCH / PROSE)"]
   ORCH --> TR["ToolRuntime (registry + approvals)"]
   TR --> OPS["Operator (Playwright headed)"]
-  TR --> TP["Tool Packs (filesystem/web/pdf/etc)"]
+  TR --> TP["Tool Packs (fs/archive/project/text; operator pack when enabled)"]
   OPS --> ART[Artifacts + Downloads]
   TP --> ART
   MEM <--> ART
 
   EB <--> ORCH
   EB <--> MEM
+  EB <--> GOALS
   EB <--> TR
   EB <--> OPS
   EB <--> UI
 ```
+
+### Layered Brain / M1
+
+M1 adds the first shipped internal brain runtime around the model. The LLM is still a processing engine, not the whole brain: the orchestrator now builds a canonical, serializable `ThoughtState` for each handled turn and hands a bounded thought-state summary into the existing reply generation path.
+
+Ordered pipeline stages:
+- input normalization for text, with bounded placeholders for future voice, image, and file normalization
+- fast instinct pass for intent/domain/urgency/affect/tool-memory hints
+- meaning parse for intent, entities, constraints, references, ambiguities, user goal, and assistant goal
+- memory relevance gate that decides whether summarized memory retrieval should run
+- summarized-memory retrieval adapter, only when the gate is on
+- structured thought-state assembly with goal context
+- deterministic fast/slow reasoning mode selection
+- bounded curiosity/thinking state that records why Stark should think, what questions matter, whether thinking can happen quickly now, or whether deeper reflection should be deferred
+- response-plan creation for the existing output path
+- memory writeback proposal generation without bypassing existing approval/persistence semantics
+- goal-manager bridge/sync flag using the existing `GoalStore` that backs the Stark UI goal panel
+
+Fast path is for simple, low-risk, low-ambiguity turns that do not need tools or memory; slow path is selected for continuity, ambiguity, active-goal relevance, memory relevance, tool need, conflict, uncertainty, or heightened affect. The memory gate prevents the brain layer from treating every message as a memory retrieval request. When retrieval is needed, M1 uses summarized memory objects with IDs, source refs, importance, affect tags, related goals, relevance, and retention hints instead of injecting raw historical text as the canonical memory format.
+
+The goal-manager integration is deliberately a bridge, not a second tracker. The brain reads active UI goal records from `GoalStore`, reflects relevant goal IDs into `goal_state`, and raises `ui_sync_required` when a turn appears to affect an active goal or memory proposal.
+
+Curiosity is deliberately structured and bounded. The brain can mark `user_curiosity`, `thinking_requested`, `active_goal`, `memory_continuity`, `unresolved_thread`, and related triggers, form a few useful internal questions, and choose `none`, `quick`, or `deep_deferred` thinking mode. This makes Stark more inclined to inspect assumptions and ask better questions while staying attached to the user's task. Curiosity alone does not browse, execute tools, create memories, or claim sentience; those still pass through the normal gates.
+
+Intentionally not implemented in M1: a graph memory database, vector-retrieval replacement, model retraining from cached context, infinite-context tricks, production audio/vision/OCR extraction, autonomous planning beyond the bounded turn pipeline, multi-agent orchestration, workflow-engine rewrites, or UI redesigns unrelated to exposing bounded thought-state metadata.
+
+### PM Project Loop / M0
+
+M0 adds the first project-management loop that is actually wired to Stark's existing UI goal system. GoalStore remains the project/task authority: a PM project is stored as a parent `GoalContract`, each PM task is stored as a child goal, and the PM status is mirrored in goal `context_json` for UI and brain consumers.
+
+The bounded PM flow is:
+- normalize a complex objective into a project title and task list
+- create a parent GoalStore project goal
+- create child GoalStore task goals with PM statuses: `proposed`, `active`, `blocked`, `waiting_approval`, `done`, or `verified`
+- detect approval-sensitive work such as web research, outbound communication, credential entry, code install, or economic activity
+- write a PM report artifact under `reports/pm_projects/<session_id>/`
+- expose compact snapshots through `SessionGateway.snapshot_pm_projects(...)`, `GET /api/ui/pm/project_plans`, and the normal snapshot bundle
+- allow explicit task status updates through `SessionGateway.update_pm_project_task_status(...)` and `POST /api/ui/pm/task_status`
+
+The PM report includes the current objective, completed tasks, blocked tasks, next actions, approvals needed, risks, and task status counts. Updating one task to `done` automatically activates the next proposed task when no active task remains, which gives Stark a simple one-by-one PM progress loop while preserving the existing GoalStore and HUD behavior.
+
+This is project orchestration metadata, not unsupervised execution. It does not let Stark secretly run tools, bypass approvals, send outbound messages, browse the web, spend money, or create a second task database.
+
+### PM Orchestrator Bridge / M0
+
+The shipped stage runner now has a bounded PM bridge for complex project-like turns. During PLAN, Stark detects requests that clearly ask for project/task/PM-style handling, creates a GoalStore-backed PM project, and records compact PM context in `TurnContext.other_context`. During REVIEW or a safe pause, Stark updates the current PM task status and keeps the PM artifact, GoalStore task goals, response refs, and snapshot bundle aligned.
+
+This bridge intentionally stores PM metadata outside `PlanContract.plan_json` because the plan contract is strict and ACT re-validates it before execution. The bridge also treats unknown-job pauses honestly: if Stark needs Jeremiah's procedure or constraints, the PM setup task moves to `waiting_approval`; after Jeremiah resumes with usable guidance, that setup task can move to `done` and the next PM task becomes active.
+
+This is still not autonomous project execution. It proves that the real orchestrator path can create and update PM state while preserving approvals, unknown-job gates, and user-visible evidence.
+
+### PM Task Execution Handoff / M0
+
+Fresh continuation turns such as `continue`, `next task`, or `continue with the plan` can now reopen the latest active PM project for the session, recover the active PM task, and hand that task back into Stark's ordinary ACT path instead of creating a disconnected execution loop.
+
+The first shipped PM task classes are intentionally narrow:
+- workspace inspection tasks route to `project.tree`
+- explicit web-research tasks route to `browser.search` only when the current turn explicitly allows web research
+- PM reporting tasks route to `text.write_report`
+
+### PM Brain Goal Sync / M0
+
+The layered brain now reflects PM work through the same GoalStore-backed truth that the HUD already uses. When a PM project or task is active, `goal_state` includes the goal-manager authority, active PM project goal/title, active PM task goal/title/status, and whether the current task is approval-gated.
+
+This is intentionally compact. The brain does not ingest the entire PM artifact as internal state. Instead it reads GoalStore plus the compact PM turn context, then exposes bounded PM hints through:
+- `ThoughtState.goal_state`
+- `thought_state_summary(...)`
+- `SessionGateway.snapshot_brain(...)`
+
+This keeps the shipped brain, PM loop, and HUD aligned without creating a second goal manager or widening into autonomous PM replanning.
+
+That means the PM queue now does real work for supported tasks: Stark can execute the bounded tool slice, record ordinary tool evidence, update PM status during REVIEW, and move to the next task on the next turn while keeping GoalStore and the UI snapshot bundle in sync.
+
+This is still scoped honestly. It is not a general autonomous project executor, not a coding-agent replacement for arbitrary implementation tasks, and not a bypass around normal approval or no-web-by-default rules.
+
+### Learning Feedback Capture + Lesson Proposal / M0
+
+Stark now has a bounded learning-feedback lane on the shipped runtime path. When Jeremiah gives explicit feedback such as a correction, preference, rejection, approval, or teaching instruction, Stark captures that signal from the real chat turn instead of treating it as dead text.
+
+This lane currently does four concrete things:
+- classify explicit feedback into structured categories: `correction`, `preference`, `approval`, `rejection`, `teaching`, `emotional_signal`, and `project_lesson`
+- store feedback capture as an internal event tied to the live session/turn evidence
+- create durable `lesson_proposal` pending actions when the signal is actionable
+- expose the resulting state through `SessionGateway.snapshot_learning(...)`, `GET /api/ui/snapshot/learning`, `POST /api/ui/learning/feedback`, and the normal snapshot bundle
+
+The lesson proposal object is intentionally bounded. It carries a title, summary, categories, affect tags, confidence, practice scope, memory-writeback hint, evidence refs, and a stable signature hash for dedupe. Approval-only feedback is recorded without creating a lesson proposal. Actionable feedback such as corrections, preferences, rejections, and teaching signals becomes a pending lesson proposal instead of being silently discarded.
+
+This milestone does not yet make Stark self-train, auto-practice changes, or auto-store durable memory without the existing gates. It gives the shipped runtime a structured place to remember what Jeremiah is trying to teach and keeps that visible in the HUD/API surface for future supervised practice work.
+
+### AI Conversation Drafts / M0
+
+Stark can now participate in supervised AI-to-AI communication without relying on the detached `tmp/Conversation.py` script as the runtime. The useful provider/browser knowledge from that file has been translated into repo-owned provider profiles and routed through Stark's shipped internet/operator path.
+
+This slice adds:
+- typed provider profiles for ChatGPT, DeepSeek, Gemini, and Grok
+- a canonical AI conversation draft object with exact content, provider context, risk labels, approval status, and artifact refs
+- pending-action persistence plus report artifacts under `reports/internet_ai_conversations/<session_id>/`
+- `SessionGateway` methods for draft creation, snapshotting, and supervised send attempts
+- HUD routes:
+  - `GET /api/ui/internet/ai_conversations`
+  - `POST /api/ui/internet/ai_conversation/draft`
+  - `POST /api/ui/internet/ai_conversation/send`
+
+The first send path is intentionally narrow:
+- exact-content approval is required before `browser.send_message`
+- sandbox accounts come first
+- real-account sends remain blocked in M0
+- the actual open/send steps run through Stark's existing `ToolRuntime` and operator tool seam
+
+This gives Stark a real, inspectable way to help converse with other AIs online while keeping Jeremiah in control of what is sent. It does not yet add unsupervised posting, multi-party inbox behavior, or autonomous internet identity management.
+
+### Resident Self-Improvement Handoff / M0
+
+The resident autonomy loop can now turn a bounded self-improvement observation into a real governed coding draft instead of leaving it as a passive queue item. When the resident supervisor selects a `self_improve` mission, it can create a review-only coding task that writes a local self-improvement draft under `workspace/reports/self_improvement/`, route that task through the shipped governed patch planner, and persist the resulting patch-plan/artifact refs back onto the self-improvement proposal.
+
+This keeps the mutation boundary honest:
+- the resident loop can observe weaknesses and draft a governed review artifact
+- the governed coding pipeline remains the only sanctioned route for patch planning/apply/rollback
+- no autonomous code apply is unlocked by this slice
+- the CLI can inspect the queue directly through `/improve`
+
+The proposal now carries bounded handoff metadata such as `pending_action_id`, `coding_task_id`, `patch_plan_id`, target path, and draft artifact refs. That gives Stark a real local self-improvement review lane without widening into unsupervised repo editing.
+
+### Agency Capability / M0
+
+Stark now has an explicit local agency capability profile instead of letting broad phrases like “think,” “work,” “earn,” “live,” or “communicate” float around as vague promises. The profile is available through the Session Gateway and local UI snapshot route as `agency_capability_snapshot.m0`.
+
+The five bounded domains are:
+- `think`: structured thought state, fast/slow routing, summarized memory gates, retrieval context, and model routing
+- `work`: ToolRuntime, SafeRoots, operator tools, coding oversight, skills, artifacts, and project/goal state
+- `earn`: research and drafting help only by default; real economic actions require a separate `economic_activity_approved` gate in addition to normal Tier 2 approval
+- `live`: local status, memory, goals, idle jobs, recovery surfaces, and privacy defaults; not a self-sufficient always-on life manager
+- `communicate`: chat and drafting are normal; outbound sends/posts/forms remain external-state actions requiring approval
+
+The important hardening in this pass is the economic-action gate. If Stark is about to use an external-state/operator action that looks like payment, checkout, trade, contract, bid, hire, invoice, quote, subscription, or other earning/financial activity, the normal Tier 2 approval is not enough. The action is blocked unless the approval context also contains `economic_activity_approved`. This keeps “help me earn” in the safe lane of research, drafting, planning, and review until the user explicitly approves a real-world economic action.
+
+The follow-on preflight layer adds `agency_action_preflight.m0`. It deterministically classifies a proposed action before it becomes a tool call, returning:
+- agency domains involved
+- primary domain
+- `answer`, `draft`, `ask`, `execute_with_approval`, or `block`
+- impact level
+- required gates
+- blocked reasons
+- safe next steps
+
+The preflight surface is available through `SessionGateway.preflight_agency_action(...)` and `POST /api/ui/agency/preflight`. HUD chat ingress also attaches a compact preflight summary to the ingest trace and passes it into the orchestrator UI metadata. This does not block ordinary conversation; it gives the planner/UI a shared warning surface before risky actions become real tool execution.
+
+This does not make Stark autonomous, self-employed, financially competent, or authorized to act as a legal/financial representative. It makes the boundary testable: Stark can help prepare and reason, but high-impact external commitments remain explicit, visible, and approval-bound.
+
+### Supervised Internet Runtime / M0
+
+M0 is the first bounded step toward letting Stark operate outside the lab without pretending it is ready for unsupervised internet life. The default mode is `observe_only`: Stark may reason, draft, report, and ask for approval, while external-state actions remain blocked or approval-gated.
+
+The ten shipped controls are:
+- permission constitution and default policy in `config/internet_policy.yaml`
+- deterministic internet-action preflight with `allow`, `draft_only`, `require_approval`, or `block`
+- remote access hardening rules: web is read-only for risky controls and local controller authority remains required
+- browser sandbox and download quarantine defaults
+- outbound communication safety with draft-only default and exact-content review
+- daily life loop in report-only mode: observe approved sources, update goals, propose tasks, draft work, ask approval, PM report, reflect
+- owner approval gates for external state, economic activity, credential entry, code install, and outbound content
+- red-team evaluation gates for prompt injection, approval bypass, phishing, fake checkout, runaway loops, malware download, credential exfiltration, economic commitment, remote role abuse, and kill switch behavior
+- kill switch semantics that block web research, operator actions, outbound messages, external-state tools, and idle internet jobs when active
+- seven-day observe-only trial before supervised external action should be considered
+
+The owner profile records Jeremiah Wong Zhi Qi as Stark's father/owner approval authority. This is governance metadata for this local assistant, not legal personhood or a claim that Stark can act independently.
+
+Human-style learning is represented as an evidence-guided loop: observe, ask, try safely, receive feedback, reflect, extract a lesson, practice in a low-risk path, then propose memory. It is not biological learning, hidden self-modification, or automatic memory persistence. Memory writeback remains proposal-only unless the existing memory gates and approval semantics allow promotion.
+
+Gateway/API surfaces:
+- `SessionGateway.snapshot_internet_supervision(...)`
+- `SessionGateway.preflight_internet_action(...)`
+- `SessionGateway.plan_human_style_learning(...)`
+- `SessionGateway.run_internet_observe_only_session(...)`
+- `SessionGateway.snapshot_internet_observe_sessions(...)`
+- `GET /api/ui/snapshot/internet`
+- `POST /api/ui/internet/preflight`
+- `POST /api/ui/internet/learning_plan`
+- `POST /api/ui/internet/observe`
+- `GET /api/ui/internet/observe_sessions`
+
+The first observe-only runner slice writes bounded session reports under `reports/internet_observe/<session_id>/<turn_id>.json`. It requires `allow_web_research` before treating internet source payloads as approved read-only inputs, records prompt-injection risk on source summaries, blocks requested external-state actions during the observe-only trial, and produces a PM report with completed work, blocked actions, next actions, approvals needed, and risks.
+
+Intentionally not implemented in M0: public cloud hosting, always-on web autonomy, default web browsing, social posting, payment handling, account ownership, unreviewed credential entry, autonomous contracting/bidding, autonomous code installation, or a finished legal/financial/medical action framework.
+
+### External Module Intake
+
+Stark now has a bounded external-module intake layer for local bundles first placed under `tmp/`, then materialized into repo-owned `external_modules/` with typed manifests. ZIP bundles stay as archives under status buckets, curated source adapters live under `external_modules/sources/`, blocked/deferred material stays quarantined, and vendored dependency trees such as virtualenv/site-packages payloads are skipped.
+
+Current classification policy:
+- `wired_existing`: Stark already has a shipped seam, such as the Windows-MCP operator bridge.
+- `candidate_adapter`: useful only through an adapter boundary, such as Browser Use/MCP research, BitNet, or llama.cpp.
+- `candidate_reference`: useful as planning or skill-template reference material, not a runtime controller.
+- `deferred`: technically interesting but outside the current production path, such as DensePose.
+- `blocked`: high-risk or scope-expanding stacks that must not enter normal Stark without a separate safety milestone, such as Pentagi-style cyber multi-agent systems.
+- `aggregate`: a container bundle whose child projects must be assessed individually.
+
+Materialization is explicit through `python scripts/import_external_modules.py --move`. The Session Gateway and HUD scan `external_modules/` first and still tolerate an empty or missing `tmp/` folder for future intake. Each materialized item records `repo_owned`, `import_status`, `materialized_path`, and a manifest path so Stark can show whether a bundle is an active candidate, a reference, or quarantined.
+
+The first adapter built from this lane is `browser.research_mcp`. It calls a locally started Browser Use MCP bridge through a small HTTP JSON-RPC adapter, writes a bounded result artifact, and remains blocked unless the current turn/session explicitly allows web research. It does not launch web access by default, does not replace the headed operator, and does not turn Browser Use into autonomous external-state control.
+
+This intake layer is intentionally not a broad plugin installer, dependency manager, automatic code importer, or autonomy expansion path. It gives Stark a truthful way to see what is available, record fit and limitations, and route only safe adapter-shaped candidates toward existing ToolRuntime, Operator, LLM routing, skills, or PM-goal seams.
 
 ---
 
@@ -125,6 +354,7 @@ For the current anti-drift docs/examples foundation, use these pages together in
 - `examples/skills/user_pack_template/` - the current user-pack template, including python and command-template examples
 - `examples/replay/` - a committed scenario spec plus a small sanitized replay-bundle example for local read-only walkthroughs
 - `docs/operator/local_operations_runbook.md` - current local start/stop/status, manual update/rollback, backup/restore, and install-vs-workspace boundary notes
+- `docs/operator/local_deployment_profiles_and_recovery_drills.md` - bounded M27.2 local profile launcher truth, expected local services/storage, and explicit recovery-drill restore order
 - `docs/operator/incident_observability_runbook.md` - current incident/debug evidence flow for trace, diagnostics, crash bundles, replay, bug-package assembly, and redaction-safe sharing
 - `docs/operator/voice_privacy_runbook.md` - current voice/STT/TTS privacy defaults, local-only limits, mute/DND rules, and capability-honest troubleshooting
 - `docs/operator/first_week_with_stark_fleet.md` - current first-week local onboarding checklist with replay, idle-job, and backup/restore drills
@@ -379,7 +609,7 @@ Failure signals worth learning from:
 ### 3) Operator (headed browser controller)
 
 Responsibilities:
-- Headed Playwright runtime (visible by default).
+- Headed Playwright runtime (visible by default); if Playwright assets/startup are unavailable, the operator returns an explicit unavailable outcome instead of faking pages.
 - DOM-first actions with robust selector strategy.
 - Fallback to browser-scoped mouse/keyboard when DOM targeting is weak.
 - Evidence artifacts: screenshots, DOM snapshots, extracts, downloads.
@@ -446,20 +676,17 @@ Failure taxonomy (stable error classes for learning)
 
 ### 4) Proactive idle loop / reflection engine (no spam)
 
-Runs when idle (no user activity, not awaiting approvals, not mid-tool execution). Goals:
-- Offline reflection on DB (always allowed).
-- Internal self Q/A loop that stores results without cluttering user-facing memory.
-- Owner model candidates as **pending** memories (approval-gated).
-- Self model stats (reliability, common failures, recommended fallbacks).
-- Maintenance jobs: dedupe, consolidation proposals, staleness checks, exports.
-- Optional online watchlists (explicitly enabled only).
+The shipped local startup path now owns a real idle scheduler. When the HUD/runtime starts, it constructs the scheduler, runs bounded idle checks, and records offline reflection jobs into the current idle-job/reporting surfaces used by the Control Center.
 
-Recommended internal tables:
-- `reflection_qa` (question, answer, confidence, evidence, status)
-- `unresolved_gaps` (questions that should only be asked if blocking)
-- `self_profile` (capabilities, reliability stats, limitations)
-- `digests` (non-durable watchlist results; stored as DB rows or events)
-- `watchlists` (or store watchlist entries as preference memories)
+What is shipped now:
+- bounded offline reflection against current local memory/tool/event signals
+- persisted idle jobs and reflection outputs through the existing idle-job store/HUD snapshot surfaces
+- anti-spam cadence limits so repeated idle ticks do not flood memory or approvals
+
+What remains intentionally narrower than older planning notes:
+- richer `reflection_qa` / `unresolved_gaps` table families are not the current shipped proof surface
+- watchlists/digests/routines remain planned follow-on scope, not default startup behavior
+- online or connector-backed watch activity is not implied by the shipped idle loop
 
 Timezone semantics:
 - all schedules use Asia/Kuala_Lumpur timestamps.
@@ -467,7 +694,7 @@ Timezone semantics:
 Idle defaults (tunable):
 - `IDLE_AFTER_MINUTES = 10`
 - Rate limits (anti-spam): max new pending memories per hour: 3; max owner-model candidates per run: 1; max maintenance proposals per run: 2
-- Confidence bands: `HIGH_CONF = 0.80`, `MED_CONF = 0.55` (below MED → unresolved gap)
+- Confidence bands: `HIGH_CONF = 0.80`, `MED_CONF = 0.55`
 
 
 ### 5) Control Center UI + Session Gateway
@@ -496,12 +723,13 @@ Recommended gateway tables (if persisted):
 
 Skill packs are add-on bundles that can be installed/enabled independently.
 
-A typical pack contains:
-- `pack.yaml` (name, version, dependencies)
-- `skill.yaml` (triggers, inputs/outputs schema, recipes, tests)
-- `recipes/` (procedure docs; can map to research memories)
-- `tools/` (optional tool extensions)
-- `tests/` (pack-level tests)
+A typical shipped pack contains:
+- `pack.yaml` (name, version, metadata)
+- `skills/*.yaml` definitions
+- optional `python/` entrypoints for `python` runner skills
+- optional `recipes/` docs and `tests/`
+
+The current runtime does **not** claim arbitrary embedded tool-extension loading from skill packs; supported execution stays bounded to the declared shipped runners.
 
 ### 7) Core data contracts + event bus
 
@@ -538,7 +766,9 @@ Adapters:
 
 ### 10) Core tool packs + workspace sandbox
 
-Tools are grouped into packs (filesystem, browser, PDF/data transforms, etc). The sandbox:
+The shipped default runtime loads the core `fs`, `archive`, `project`, and `text` packs. The operator/browser pack is added only on the operator-enabled runtime path. Web/PDF/data-transform packs should be treated as future or optional work unless a specific runtime path registers them explicitly.
+
+The sandbox:
 - enforces SafeRoots
 - prevents writing outside workspace unless explicitly approved and policy-allowed
 - normalizes artifact paths and logging
@@ -554,6 +784,7 @@ Record-and-replay:
 ### 12) Packaging/installer + updates + secrets
 
 Windows-first proof currently stays bounded to:
+- release-facing local launch through `Start_Stark.bat` or `python scripts/start_stark.py --start-ollama`
 - manual local launch/readiness through `scripts/run_local_hud.py`
 - config snapshot / reload-state / rollback precedent through the config store surfaces
 - health / validation entry points through the local HUD `/health`, `scripts/verify_all.py`, and targeted `scripts/auto_test_*` helpers
@@ -566,6 +797,8 @@ This README path does **not** prove a finished installer, auto-bootstrap, or app
 Current repo truth is a **shipping frontier**, not a fully productized installer/updater stack.
 
 Current entrypoints and boundaries:
+- **Release-facing local entrypoint:** `Start_Stark.bat` or `python scripts/start_stark.py --start-ollama`
+  - the release entrypoint can try to start local Ollama, then performs a bounded readiness check before delegating to the existing HUD launcher
 - **Control Center current entrypoint:** `python scripts/run_local_hud.py`
   - current supported flags: `--host`, `--port`, `--workspace-root`
   - default bind stays `127.0.0.1` and default port stays `8765`
@@ -586,6 +819,9 @@ Default ports and path discovery:
 - release-boundary truth stays explicit: source code lives in the repo checkout, shipped assets are the extracted/package payloads called out by the layout plan + manifests, runtime-generated state belongs under the active workspace, and workspace data remains operator-owned rather than part of build/dist/release trees
 
 Install types and deliverables:
+- **Installer EXE — planned Windows-first path, not current repo proof**
+  - signed installer packaging remains outside the currently proven repo path
+  - current installer proof is the bounded Python installer/uninstall contract below
 - **Portable ZIP — current bounded path**
   - run-from-folder/manual local launch
   - no registry changes proven by this repo path
@@ -606,7 +842,8 @@ Packaging approach and output roots:
 - **Packaging approach:** PyInstaller remains the MVP build path unless explicitly changed later
 - **Build roots:** `build/pyinstaller/<version>/...`, `dist/pyinstaller/<version>/...`, and `release/pyinstaller/<version>/...`
 - **Separation rule:** `build/`, `dist/`, and `release/` are build-output trees only; runtime/workspace/generated content still belongs under the selected workspace root (repo runs default adjacent, frozen runs default per-user) or an explicit `--workspace-root` override
-- **Version authority:** `VERSION` remains the primary release/build authority and packaging helpers read it through `assistant.app_version.get_release_version(...)`
+- **Version authority:** `VERSION` is the single outward-facing release/build authority. Packaging helpers and release-facing runtime surfaces read it through `assistant.app_version.get_release_version(...)`.
+- **Config mirror rule:** `assistant/config_defaults/general.yaml -> app.version` is kept as a checked-in mirror for config completeness only; it must match `VERSION` and must not become an independent release source of truth.
 
 Current bounded executable specs:
 - **Control Center PyInstaller MVP target:** `packaging/pyinstaller/control_center_local_hud.spec`
@@ -1019,10 +1256,10 @@ The detailed M9 truth lock is documented in:
 
 ### 13) Configuration + policy (one place for knobs)
 
-Current config truth is layered, not a single JSON pair:
+The authoritative shipped configuration path is the ConfigStore merge of:
 - built-in defaults under `assistant/config_defaults/*.yaml`
 - workspace overrides under `workspace/config/*.yaml`
-- optional sample overlays under `workspace/config_example/*.yaml`
+- example overlays under `workspace/config_example/*.yaml` that are documentation/examples only and are **not** auto-loaded into the shipped runtime
 - temporary/session overrides surfaced through the config store when explicitly applied
 
 Policy concepts:
@@ -1048,7 +1285,7 @@ Policy concepts:
 
 Core ER (expanded):
 
-Additional (recommended) tables that may exist even if not shown in the ER above:
+Additional tables that may exist in later follow-on work, but are not required proof for the shipped core above:
 - `digests` (watchlist outputs)
 - `watchlists` (enabled topics + schedules)
 - `config_versions`, `config_audit` (config history)
@@ -1192,6 +1429,14 @@ ollama pull qwen3-coder:30b
 ollama pull qwen3:4b
 ```
 
+### Start Stark after dependencies are ready
+```bash
+Start_Stark.bat
+python scripts/start_stark.py --start-ollama
+```
+
+The release-facing entrypoint can try to start local Ollama, checks readiness, then launches the existing Local HUD path. Advanced/developer launches can still use `python scripts/run_local_hud.py` directly.
+
 ### Create a virtual environment
 ```bash
 python -m venv .venv
@@ -1218,10 +1463,11 @@ python scripts/init_workspace_runtime.py playwright-status --workspace-root <pat
    ```
 2. Treat `workspace/config_example/*` as optional sample overrides only. Copy only the YAML files you want into `workspace/config/`; a minimal local review does not require every sample file.
 3. Keep runtime truth anchored to the local launcher and current verification entry points:
-   - `python scripts/run_local_hud.py` for the manual local HUD launch path (FastAPI when available, static fallback otherwise); use `--workspace-root <path>` when the workspace should live outside the extracted folder default
+   - `Start_Stark.bat` or `python scripts/start_stark.py --start-ollama` for the release-facing local start path; both can try to start local Ollama and then perform the bounded readiness check
+   - `python scripts/run_local_hud.py` for the manual lower-level HUD launch path (FastAPI when available, static fallback otherwise); use `--workspace-root <path>` when the workspace should live outside the extracted folder default
    - `python scripts/verify_all.py` for the broader verification sweep
    - targeted `scripts/auto_test_*` helpers when you need deeper proof for a specific subsystem
-4. Use `docs/command_center/README.md` and `docs/command_center/operator_uat_runbook.md` as walkthrough/support surfaces after the launcher path is understood; they do not replace the runtime owners above.
+5. Use `docs/command_center/README.md` and `docs/command_center/operator_uat_runbook.md` as walkthrough/support surfaces after the launcher path is understood; they do not replace the runtime owners above.
 
 > This repo does not yet prove a finished installer/bootstrap/update flow from this README path. Treat the sample config pack as manual reference material, not an auto-seeded first-run setup.
 
@@ -1230,12 +1476,13 @@ python scripts/init_workspace_runtime.py playwright-status --workspace-root <pat
 For the current closeout path, use the docs in this order so the repo stays capability-honest:
 
 1. Start here in `README.md` for prerequisites, local-first scope, and capability labels.
-2. Launch through `scripts/run_local_hud.py` to anchor the real manual launcher and fallback story.
-3. Read `workspace/config_example/README.md` only as manual sample-config guidance for optional overrides.
+2. Launch through `Start_Stark.bat` or `python scripts/start_stark.py --start-ollama` for the release-facing local start path.
+3. Use `python scripts/run_local_hud.py` when you need the lower-level manual launcher and fallback story.
+4. Read `workspace/config_example/README.md` only as manual sample-config guidance for optional overrides.
 4. Use `docs/command_center/README.md` as the navigation bridge into the current acceptance and runbook surfaces.
-5. Read `docs/command_center/acceptance_criteria.md` and `docs/command_center/frontend_integration_test_matrix.md` before treating the runbook as complete validation truth.
-6. Use `docs/command_center/operator_uat_runbook.md` as the strongest current manual operator-validation journey.
-7. Use `scripts/verify_all.py` and targeted `scripts/auto_test_*` helpers as deeper proof after the manual docs walk succeeds.
+6. Read `docs/command_center/acceptance_criteria.md` and `docs/command_center/frontend_integration_test_matrix.md` before treating the runbook as complete validation truth.
+7. Use `docs/command_center/operator_uat_runbook.md` as the strongest current manual operator-validation journey.
+8. Use `scripts/verify_all.py` and targeted `scripts/auto_test_*` helpers as deeper proof after the manual docs walk succeeds.
 
 This review path is still manual, local, and bounded. It does not prove a unified docs portal, finished installer/bootstrap/update flow, zero-touch onboarding, or default-on Windows-MCP path.
 
@@ -1309,6 +1556,7 @@ Use `python scripts/verify_all.py` as the main verification entry point after th
 - Replay harness enables:
   - regression tests across versions
   - diagnosis of failures without re-running external interactions
+  - local live LLM cassette recording when replay mode is enabled on the runtime call, plus local replay consumption of those cassettes
   - export of bounded replay bundles; HUD `dev_replay` fixtures are local simulation aids, not whole-system durable replay exports
 
 ---
@@ -1324,7 +1572,7 @@ Use `python scripts/verify_all.py` as the main verification entry point after th
 7. **Skills registry**: pack loading + procedures/recipes.
 8. **Replay harness**: record/replay tool + LLM I/O.
 9. **Packaging + secrets**: installer, encrypted secrets, update strategy.
-10. **Reflection engine**: reflection_qa + maintenance proposals.
+10. **Reflection engine breadth**: expand beyond current shipped idle-job reflection outputs into richer reflection storage only after the bounded idle loop remains stable.
 11. **Observability**: redaction + crash reporting + diagnostics bundle.
 
 - docs/architecture/security_red_lab_session_controls.md
