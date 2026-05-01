@@ -1,0 +1,12 @@
+{
+  "levels": [
+    {"level": 0, "name": "observe_only", "description": "Record observations without action."},
+    {"level": 1, "name": "record_memory_only", "description": "Queue or record memory through approved paths."},
+    {"level": 2, "name": "analyze", "description": "Perform read-only analysis and prepare suggestions."},
+    {"level": 3, "name": "draft_plan", "description": "Draft a plan without executing side effects."},
+    {"level": 4, "name": "safe_read_only_action", "description": "Run safe local read-only actions."},
+    {"level": 5, "name": "reversible_local_change", "description": "Requires backup and approval."},
+    {"level": 6, "name": "ask_permission", "description": "Ask user before risky action."},
+    {"level": 7, "name": "block", "description": "Blocked unless explicitly overridden by valid authority."}
+  ]
+}
